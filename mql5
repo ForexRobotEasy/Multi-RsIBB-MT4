@@ -1,0 +1,82 @@
+mql5
+//+------------------------------------------------------------------+
+//|                                 Multi RsIBB MT4                   |
+//|                            forexroboteasy.com                      |
+//|                          Forex Robot Easy Team                     |
+//+------------------------------------------------------------------+
+
+#property strict
+
+// Input parameters
+input int RSI_Period = 14; // Period for RSI calculation
+input int BB_Period = 20; // Period for Bollinger Bands calculation
+input double BB_Deviation = 2.0; // Standard deviation for Bollinger Bands calculation
+input int Show_Candles = 10; // Number of past candles to be shown
+
+// Global variables
+double rsi_buffer[];
+double upper_band[];
+double lower_band[];
+int counted_bars = 0;
+
+//+------------------------------------------------------------------+
+//| Custom indicator initialization function                         |
+//+------------------------------------------------------------------+
+int OnInit()
+{
+   // Set indicator buffers
+   SetIndexBuffer(0, rsi_buffer, INDICATOR_DATA);
+   SetIndexBuffer(1, upper_band, INDICATOR_CALCULATIONS);
+   SetIndexBuffer(2, lower_band, INDICATOR_CALCULATIONS);
+   
+   // Set indicator labels
+   IndicatorSetString(INDICATOR_SHORTNAME, 'Multi RsIBB MT4');
+   
+   return(INIT_SUCCEEDED);
+}
+
+//+------------------------------------------------------------------+
+//| Custom indicator iteration function                              |
+//+------------------------------------------------------------------+
+int OnCalculate(const int rates_total,
+                const int prev_calculated,
+                const datetime &time[],
+                const double &open[],
+                const double &high[],
+                const double &low[],
+                const double &close[],
+                const long &tick_volume[],
+                const long &volume[],
+                const int &spread[])
+{
+   int limit = rates_total - prev_calculated;
+   
+   // Calculate RSI
+   ArraySetAsSeries(close, true);
+   int rsi_calculated = iRSI(NULL, 0, RSI_Period, PRICE_CLOSE);
+   
+   // Calculate Bollinger Bands
+   int bb_calculated = iBands(NULL, 0, BB_Period, BB_Deviation, 0, PRICE_CLOSE);
+   
+   // Copy calculated values to buffers
+   ArrayCopyRates(rates_total, prev_calculated, close_buffer);
+   ArrayCopy(rsi_buffer, close_buffer, ArraySize(close_buffer));
+   ArrayCopy(upper_band, close_buffer, ArraySize(close_buffer));
+   ArrayCopy(lower_band, close_buffer, ArraySize(close_buffer));
+   
+   // Calculate signals based on specified number of past candles
+   for (int i = limit; i < rates_total; i++)
+   {
+      // Check for signal conditions
+      bool rsi_signal = rsi_buffer[i] > upper_band[i];
+      bool bb_signal = close_buffer[i] > upper_band[i] || close_buffer[i] < lower_band[i];
+      
+      // Print signal if conditions are met
+      if (rsi_signal && bb_signal)
+      {
+         Print('Trading signal detected at ', TimeToStr(time[i]));
+      }
+   }
+   
+   return(rates_total);
+}
